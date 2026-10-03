@@ -1,0 +1,41 @@
+{
+  "name": "sih26171",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Privacy-preserving on-device vision browser agent (SIH26171)",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "prettier": "./config/prettier.json",
+  "scripts": {
+    "assets": "node packages/scripts/fetch-assets.mjs",
+    "dev": "npm run dev --workspace @sih/extension",
+    "dev:firefox": "npm run dev:firefox --workspace @sih/extension",
+    "build": "npm run build --workspaces --if-present",
+    "build:chrome": "npm run build:chrome --workspace @sih/extension",
+    "build:firefox": "npm run build:firefox --workspace @sih/extension",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run --config config/vitest.config.mts",
+    "test:watch": "vitest --config config/vitest.config.mts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.2",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
+    "happy-dom": "^20.14.5",
+    "prettier": "3.9.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "5.0.1"
+  }
+}

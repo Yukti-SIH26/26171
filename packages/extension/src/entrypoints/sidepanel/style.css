@@ -1,0 +1,1635 @@
+/*
+ * Yukti side panel.
+ *
+ * A light, high-contrast theme with generous type. The panel is narrow and the
+ * content is dense — capability reports, element lists, redaction findings — so
+ * legibility is the priority over density. Base size is 15px rather than the
+ * 12-13px that extension UIs usually settle for, because a user reading a list of
+ * what was found in their own data should not have to squint at it.
+ *
+ * Colour is used sparingly and always to mean something: green for "safe",
+ * amber for "worth knowing", red for "sensitive or blocked". Nothing is coloured
+ * for decoration, so a coloured thing on screen is always a signal.
+ */
+
+:root {
+  /* Surfaces, light to dark */
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --surface-3: #e7ecf4;
+
+  --border: #dde4ee;
+  --border-strong: #c7d2e2;
+
+  /* Text */
+  --text: #16202e;
+  --text-2: #475569;
+  --muted: #7c8899;
+
+  /* Accent: the blue from the extension mark */
+  --accent: #2b7cf6;
+  --accent-hover: #1a68e0;
+  --accent-soft: #e8f1fe;
+
+  --ok: #0f9d58;
+  --ok-soft: #e6f6ed;
+  --warn: #b26a00;
+  --warn-soft: #fdf3e3;
+  --bad: #d23b2f;
+  --bad-soft: #fdecea;
+
+  /* Rounded throughout. Pills are fully round, cards softly so. */
+  --r-card: 16px;
+  --r-control: 12px;
+  --r-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(22, 32, 46, 0.06);
+  --shadow: 0 2px 10px rgba(22, 32, 46, 0.08);
+  --shadow-lg: 0 10px 34px rgba(22, 32, 46, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/*
+ * Must come before any rule that sets `display`.
+ *
+ * The `hidden` attribute works through the browser's own `[hidden] { display: none }`,
+ * which is an attribute selector — identical specificity to a class selector. So
+ * `.panel { display: flex }` below would win on cascade order alone and every tab
+ * panel would render at once. `!important` is the correct tool here rather than a
+ * smell: `hidden` is a statement about existence, and no layout rule should be able
+ * to override it.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    'Inter',
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+}
+
+/* ---------------------------------------------------------------------------
+   Header
+   --------------------------------------------------------------------------- */
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.brand-logo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: block;
+}
+
+.brand-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.tagline {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Round icon button: the ⋯ in the header and the × in the sheet. Fixed square so
+   the glyph stays optically centred regardless of which character it holds. */
+.icon-btn {
+  flex-shrink: 0;
+  appearance: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.icon-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tabs scroll horizontally rather than wrapping: six labels will not fit a
+   narrow panel, and a wrapped tab strip changes height as you switch tabs. */
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--r-control) var(--r-control) 0 0;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.tab:hover {
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout
+   --------------------------------------------------------------------------- */
+
+/* Flex column so the chat panel can claim the full height and scroll internally,
+   keeping its composer pinned. The other panels just grow and let `main` scroll. */
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The chat panel is the exception: it fills the space and manages its own
+   scrolling, so `main` must not scroll underneath it. */
+main:has(> .panel-chat:not([hidden])) {
+  overflow: hidden;
+}
+
+.panel-chat {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel > h2 {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.explainer {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-2);
+  background: var(--accent-soft);
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+}
+
+.explainer code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-card);
+  font-size: 13.5px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.notice.state-ok {
+  background: var(--ok-soft);
+  color: #0a6b3d;
+}
+
+.notice.state-warn {
+  background: var(--warn-soft);
+  color: #7a4a00;
+}
+
+.notice.state-bad {
+  background: var(--bad-soft);
+  color: #8f251c;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.row-end {
+  justify-content: flex-end;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    transform 0.06s;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--muted);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-danger {
+  background: var(--surface);
+  border-color: #eab5b0;
+  color: var(--bad);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--bad-soft);
+  border-color: var(--bad);
+}
+
+.field-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+.text-input,
+.task-input,
+select.text-input {
+  width: 100%;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-control);
+  padding: 10px 13px;
+}
+
+.task-input {
+  resize: vertical;
+  min-height: 74px;
+  line-height: 1.5;
+}
+
+.text-input::placeholder,
+.task-input::placeholder {
+  color: var(--muted);
+}
+
+.text-input:focus,
+.task-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.check input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   Definition-list reports
+   --------------------------------------------------------------------------- */
+
+.report {
+  margin: 0;
+  display: grid;
+  /* Fixed label column so values line up down the list and can be scanned. */
+  grid-template-columns: minmax(96px, 38%) 1fr;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.report:empty {
+  display: none;
+}
+
+.report dt {
+  padding: 11px 12px 11px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.report dd {
+  margin: 0;
+  padding: 11px 14px 11px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+/* Last row keeps the rounded corner clean. */
+.report dt:last-of-type,
+.report dd:last-of-type {
+  border-bottom: none;
+}
+
+.report dd .note {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.state-ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.state-warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.state-bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Lists of elements, findings, and vault entries
+   --------------------------------------------------------------------------- */
+
+.element-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.element-list:empty {
+  display: none;
+}
+
+.el-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.el-row:last-child {
+  border-bottom: none;
+}
+
+.el-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+
+.el-name {
+  font-size: 14px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.el-meta {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.el-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Small round icon button, for per-row reveal and delete. */
+.btn-icon {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-icon:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-icon.danger:hover {
+  background: var(--bad-soft);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.pill-pw {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.pill-edit {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.pill-int {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pill-hidden {
+  background: var(--surface-3);
+  color: var(--muted);
+}
+
+.pill-px {
+  background: #ede9fe;
+  color: #6d3ee0;
+}
+
+.pill-fused {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.empty {
+  padding: 22px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Chat
+   --------------------------------------------------------------------------- */
+
+/* The transcript scrolls; the composer does not. Sizing is set in the layout
+   section above, so this only has to remove the panel's default gap. */
+.panel-chat {
+  gap: 0;
+}
+
+.chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+}
+
+.msg {
+  max-width: 92%;
+  padding: 10px 13px;
+  border-radius: var(--r-card);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* The user's own words, right-aligned and in the accent colour: the one thing on
+   this surface they authored. */
+.msg-user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 5px;
+  font-weight: 550;
+}
+
+.msg-agent {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 5px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.line {
+  color: var(--text);
+}
+
+/* Quiet by default: what was covered up is real and recorded, but it is not the
+   story of the step, so it does not compete with it. */
+.line-note {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.line-warn {
+  font-size: 13px;
+  color: var(--warn);
+}
+
+.line-bad {
+  font-size: 13.5px;
+  color: var(--bad);
+  font-weight: 550;
+}
+
+/* Three-dot pulse while a step is in flight. */
+.msg-working {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  animation: pulse 1.1s infinite ease-in-out;
+}
+
+.dots i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.dots i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes pulse {
+  0%,
+  70%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots i {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Inline "enter missing information" bubble. Wider than a normal message because
+   it holds a field, and bordered in amber so it is obviously waiting on you. */
+.msg-ask {
+  max-width: 100%;
+  width: 100%;
+  border-color: #e8c887;
+  background: var(--warn-soft);
+  gap: 6px;
+}
+
+.ask-title {
+  font-weight: 650;
+  font-size: 14px;
+  color: #7a4a00;
+}
+
+.ask-reason {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.ask-form {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.ask-form .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.msg-ask .btn-quiet {
+  align-self: flex-start;
+}
+
+.chat-empty {
+  margin: auto 0;
+  padding: 8px 4px;
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+
+.chat-empty p {
+  margin: 0 0 8px;
+}
+
+.chat-empty-title {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.chat-examples {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-examples li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ---------------------------------------------------------------------------
+   Composer
+   --------------------------------------------------------------------------- */
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 10px 0 2px;
+  background: linear-gradient(to bottom, rgba(246, 248, 251, 0) 0%, var(--bg) 22%);
+}
+
+.composer-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--r-control);
+  padding: 10px 13px;
+  resize: none;
+  max-height: 140px;
+  line-height: 1.45;
+}
+
+.composer-input::placeholder {
+  color: var(--muted);
+}
+
+.composer-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.btn-send {
+  flex-shrink: 0;
+  padding: 10px 16px;
+}
+
+/* A text-weight button, for destructive or secondary actions that should not look
+   like the main thing on screen. */
+.btn-quiet {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.btn-quiet:hover {
+  color: var(--text-2);
+}
+
+.btn-quiet:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Progress and legend
+   --------------------------------------------------------------------------- */
+
+.bar {
+  height: 10px;
+  background: var(--surface-3);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  transition: width 0.2s;
+}
+
+.progress-text {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-2);
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sw {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.sw-pw {
+  background: var(--bad);
+}
+
+.sw-edit {
+  background: var(--warn);
+}
+
+.sw-int {
+  background: var(--accent);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.dot-ok {
+  background: var(--ok);
+}
+
+.dot-bad {
+  background: var(--bad);
+}
+
+/* ---------------------------------------------------------------------------
+   Screenshots
+   --------------------------------------------------------------------------- */
+
+/*
+ * These two images are the product's whole argument, so they get the space.
+ *
+ * Full panel width, no height cap, a real border so the edge of the screenshot is
+ * distinguishable from the page behind it, and `image-rendering: auto` left alone so
+ * the browser's own downscaling filter is used rather than a nearest-neighbour mess.
+ */
+.shot {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
+}
+
+.shot:hover {
+  border-color: var(--accent);
+}
+
+/* Stacked, not side by side. The panel is narrow, and two half-width
+   screenshots would be too small to judge whether a redaction landed on the
+   right text — which is the only reason to show them. */
+.shot-pair {
+  display: grid;
+  gap: 14px;
+}
+
+.shot-fig {
+  margin: 0;
+  min-width: 0;
+}
+
+.shot-fig figcaption {
+  display: flex;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+.btn-compare {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Comparison viewer
+   --------------------------------------------------------------------------- */
+
+/*
+ * Deliberately as large as the surface allows. Anything smaller defeats the point:
+ * the viewer exists so somebody can see that a black rectangle sits exactly over
+ * their Aadhaar number and not next to it.
+ */
+.viewer {
+  border: none;
+  padding: 0;
+  background: transparent;
+  width: 98vw;
+  max-width: 98vw;
+  height: 96vh;
+  max-height: 96vh;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r-card);
+}
+
+.viewer::backdrop {
+  background: rgba(10, 16, 26, 0.72);
+}
+
+.viewer-inner {
+  background: var(--bg);
+  border-radius: var(--r-card);
+  padding: 14px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.viewer-caption {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.viewer-modes {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.viewer-modes::-webkit-scrollbar {
+  display: none;
+}
+
+.viewer-mode {
+  appearance: none;
+  flex: 1;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+
+.viewer-mode:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.viewer-mode.is-active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.viewer-mode:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.viewer-stage {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.viewer-block {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.viewer-figcap {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.viewer-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+}
+
+/* ---- Drag-to-compare ---------------------------------------------------- */
+
+/*
+ * The two frames are laid on top of each other at identical size, and the top one
+ * is clipped to the left of the divider. Because both were rendered from the same
+ * capture, a mask that is even a few pixels out shows up as text peeking from under
+ * the edge — which is exactly what a viewer should be able to catch.
+ */
+.wipe {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.wipe-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.wipe-overlay {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+}
+
+/*
+ * The overlay image must crop, not scale.
+ *
+ * Its container narrows as the divider moves, and if the image shrank with it the
+ * two frames would fall out of registration and the comparison would be worthless.
+ * Sizing by height instead — the container's height is fixed by the base image, so
+ * matching it reproduces exactly the base image's rendered width.
+ */
+.wipe-overlay .wipe-img {
+  width: auto;
+  max-width: none;
+  height: 100%;
+}
+
+.wipe-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1.5px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(10, 16, 26, 0.35);
+  pointer-events: none;
+}
+
+.wipe-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(10, 16, 26, 0.35);
+}
+
+.wipe-grip::before,
+.wipe-grip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid var(--text-2);
+  border-right: 2px solid var(--text-2);
+}
+
+.wipe-grip::before {
+  left: 9px;
+  transform: translateY(-50%) rotate(-135deg);
+}
+
+.wipe-grip::after {
+  right: 9px;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.wipe-label {
+  position: absolute;
+  top: 8px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #fff;
+  background: rgba(10, 16, 26, 0.72);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  pointer-events: none;
+}
+
+.wipe-label-left {
+  left: 8px;
+}
+
+.wipe-label-right {
+  right: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   What was covered
+   --------------------------------------------------------------------------- */
+
+.hidden-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--r-control);
+  overflow: hidden;
+}
+
+.hidden-heading {
+  margin: 0;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hidden-row {
+  display: grid;
+  grid-template-columns: minmax(0, auto) 1fr;
+  gap: 2px 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  align-items: baseline;
+}
+
+.hidden-what {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--bad);
+  text-transform: capitalize;
+}
+
+.hidden-how {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.hidden-found {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   Profile entries
+   --------------------------------------------------------------------------- */
+
+.entry-list {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.entry-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.entry-row:last-child {
+  border-bottom: none;
+}
+
+.entry-label {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.entry-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.code-block {
+  margin: 0;
+  padding: 13px;
+  max-height: 340px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  /* Long base64 and URL strings must wrap, or the panel scrolls sideways and the
+     packet cannot be read without dragging. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.code-block:empty {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Ask-don't-stop prompt
+   --------------------------------------------------------------------------- */
+
+.prompt {
+  border: none;
+  border-radius: var(--r-card);
+  padding: 0;
+  background: transparent;
+  max-width: min(92vw, 420px);
+  box-shadow: var(--shadow-lg);
+}
+
+.prompt::backdrop {
+  background: rgba(22, 32, 46, 0.42);
+}
+
+.prompt form {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prompt h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-transform: none;
+}
+
+.prompt-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+/* ---------------------------------------------------------------------------
+   Drawers
+   --------------------------------------------------------------------------- */
+
+/*
+ * Collapsed by default, which is the point: model loading, element dumps, and raw
+ * capability reports are diagnostics. They have to be reachable without competing
+ * for attention with the task the user actually came to do.
+ */
+.drawer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.drawer > summary {
+  padding: 13px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Chevron drawn in CSS rather than shipped as an icon: one less asset, and it
+   rotates for free when the drawer opens. */
+.drawer > summary::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.drawer[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.drawer > summary:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.drawer[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A report or code block sitting directly in a drawer supplies its own border, so
+   drop the doubled edge and corner radius. */
+.drawer > .report,
+.drawer > .code-block {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   System sheet
+   --------------------------------------------------------------------------- */
+
+.sheet {
+  border: none;
+  padding: 0;
+  background: transparent;
+  /* Near-full width in a narrow panel: the reports inside are two-column and
+     cramping them defeats the purpose of showing them. */
+  width: min(94vw, 460px);
+  max-height: 88vh;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--r-card);
+}
+
+.sheet::backdrop {
+  background: rgba(22, 32, 46, 0.42);
+}
+
+.sheet-inner {
+  background: var(--bg);
+  border-radius: var(--r-card);
+  padding: 18px;
+  max-height: 88vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Audit timeline
+   --------------------------------------------------------------------------- */
+
+#audit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A step card is a drawer with a three-part summary: which step, which site, how
+   many bytes. Those three facts are what you scan for; everything else is inside. */
+.drawer.step > summary {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-title {
+  font-weight: 650;
+  color: var(--text);
+}
+
+.step-where {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-size {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Nested drawer inside a step: drop a level of visual weight so the hierarchy
+   reads, otherwise two stacked cards look like siblings. */
+.drawer .drawer {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.drawer .drawer > summary {
+  font-size: 12.5px;
+  padding: 10px 12px;
+}
+
+.shot-fig .empty {
+  padding: 28px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-control);
+}

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yukti</title>
+    <meta name="manifest.open_at_install" content="false">
+    <script type="module" crossorigin src="/chunks/sidepanel-D5r_2sSi.js"></script>
+    <link rel="modulepreload" crossorigin href="/chunks/_virtual_wxt-plugins-B81UCszV.js">
+    <link rel="stylesheet" crossorigin href="/assets/sidepanel-em7p7Wlw.css">
+  </head>
+  <body>
+    <header class="head">
+      <div class="brand">
+        <img class="brand-logo" src="/icon/128.png" alt="" width="46" height="46">
+        <div class="brand-text">
+          <h1>Yukti</h1>
+          <p class="tagline">Private browsing agent</p>
+        </div>
+        <button id="system-open" type="button" class="icon-btn" aria-haspopup="dialog" aria-label="Settings and system information" title="Settings and system information">
+          <span aria-hidden="true">⋯</span>
+        </button>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button role="tab" class="tab" id="tab-agent" aria-controls="panel-agent" aria-selected="true">
+          Chat
+        </button>
+        <button role="tab" class="tab" id="tab-audit" aria-controls="panel-audit" aria-selected="false">
+          Audit
+        </button>
+        <button role="tab" class="tab" id="tab-vault" aria-controls="panel-vault" aria-selected="false">
+          Profile
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ================= Chat =================
+        The agent talks here and nowhere else. One short line per step, in the
+        order they happened, so the panel reads like a conversation rather than a
+        log file. Timestamps and error codes are deliberately absent: they belong
+        to debugging, and this surface belongs to the person watching their own
+        browser being driven.
+      -->
+      <section id="panel-agent" role="tabpanel" aria-labelledby="tab-agent" class="panel panel-chat">
+        <div id="chat" class="chat" aria-live="polite" aria-label="Conversation"></div>
+
+        <div class="composer">
+          <textarea id="task-input" class="composer-input" rows="1" placeholder="Tell Yukti what to do" aria-label="What should Yukti do?"></textarea>
+          <button id="run-task" type="button" class="btn btn-primary btn-send">Send</button>
+          <button id="stop-task" type="button" class="btn btn-danger" hidden>Stop</button>
+        </div>
+      </section>
+
+      <!-- ================= Audit =================
+        Two pictures and a plain list. The left picture never leaves this device;
+        it exists only so the boxes can be checked against the text they cover.
+        Without the pair, a redacted image proves nothing.
+      -->
+      <section id="panel-audit" role="tabpanel" aria-labelledby="tab-audit" class="panel" hidden>
+        <div class="row">
+          <button id="audit-scan" type="button" class="btn">Check this page</button>
+        </div>
+
+        <div id="audit-total" class="notice" hidden></div>
+        <div id="audit-timeline"></div>
+      </section>
+
+      <!-- ================= Profile =================
+        A list and nothing else: what is remembered, which site it belongs to, and
+        a way to delete it.
+
+        This tab used to carry a paragraph of explanation, a four-row summary of the
+        encryption scheme, and a twenty-one-row table of every data type with its
+        confidence threshold. All of it accurate, none of it what someone opens this
+        tab to find out.
+      -->
+      <section id="panel-vault" role="tabpanel" aria-labelledby="tab-vault" class="panel" hidden>
+        <div id="vault-status" class="notice" hidden></div>
+
+        <div id="vault-auth" class="card" hidden>
+          <label class="field-label" for="vault-passphrase">Passphrase</label>
+          <input id="vault-passphrase" class="text-input" type="password" autocomplete="off" placeholder="At least 10 characters">
+          <p id="vault-auth-hint" class="hint"></p>
+          <div class="row">
+            <button id="vault-unlock" type="button" class="btn btn-primary">Unlock</button>
+            <button id="vault-create" type="button" class="btn btn-primary" hidden>
+              Create vault
+            </button>
+          </div>
+        </div>
+
+        <div id="vault-body" hidden>
+          <div id="vault-entries" class="entry-list"></div>
+
+          <details class="drawer" id="vault-add-drawer">
+            <summary>Add something</summary>
+            <div class="drawer-body">
+              <label class="field-label" for="vault-add-type">What is it</label>
+              <select id="vault-add-type" class="text-input"></select>
+
+              <label class="field-label" for="vault-add-value">Value</label>
+              <input id="vault-add-value" class="text-input" type="password" autocomplete="off" placeholder="Stays on this device">
+
+              <label class="field-label" for="vault-add-site">Only for this site (optional)</label>
+              <input id="vault-add-site" class="text-input" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. digilocker.gov.in">
+
+              <p id="vault-add-hint" class="hint"></p>
+              <div class="row">
+                <button id="vault-add" type="button" class="btn btn-primary">Save</button>
+              </div>
+            </div>
+          </details>
+
+          <div class="row">
+            <button id="vault-destroy" type="button" class="btn-quiet">Forget everything</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!--
+      Settings and system, opened by the ⋯ button.
+
+      Everything that is configuration or diagnostics lives here, so the three
+      tabs stay about the task. Plain language first, raw capability reports
+      behind a drawer for when something has gone wrong.
+    -->
+    <dialog id="system-dialog" class="sheet">
+      <div class="sheet-inner">
+        <div class="sheet-head">
+          <h2>Settings</h2>
+          <button id="system-close" type="button" class="icon-btn" aria-label="Close">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+
+        <h3 class="sub">Reasoning model</h3>
+        <div class="card">
+          <label class="field-label" for="provider-select">Provider</label>
+          <select id="provider-select" class="text-input"></select>
+          <p id="provider-note" class="hint"></p>
+
+          <label class="field-label" for="provider-url">Server address</label>
+          <input id="provider-url" class="text-input" type="text" autocomplete="off" spellcheck="false">
+
+          <label class="field-label" for="provider-key">API key</label>
+          <input id="provider-key" class="text-input" type="password" autocomplete="off" placeholder="Stored encrypted on this device">
+
+          <label class="field-label" for="provider-model">Model name</label>
+          <input id="provider-model" class="text-input" type="text" autocomplete="off" spellcheck="false">
+
+          <!--
+            The screenshot toggle is gone. Sending the covered-up picture is not an
+            option any more, it is how the agent sees: it reads the screen from that
+            image. The input stays, hidden and checked, so the settings shape is
+            unchanged for anything still reading it.
+          -->
+          <input id="provider-screenshot" type="checkbox" checked hidden>
+
+          <div class="row">
+            <button id="provider-connect" type="button" class="btn btn-primary">Connect</button>
+            <button id="provider-forget" type="button" class="btn">Forget key</button>
+          </div>
+          <p id="provider-status" class="hint"></p>
+        </div>
+
+        <!--
+          The vision model has no card any more. It is not a thing to configure: it is
+          bundled, it loads itself on the first step, and the agent cannot see without
+          it. The controls stay in the markup, hidden, because the detector card still
+          wires itself to them and the load progress bar is worth having somewhere.
+        -->
+        <div hidden>
+          <div id="fit-warning" class="notice" hidden></div>
+          <select id="model-select" class="text-input"></select>
+          <dl id="model-info" class="report"></dl>
+          <button id="load-model" type="button" class="btn">Load</button>
+          <button id="unload-model" type="button" class="btn" disabled>Unload</button>
+          <div id="progress-wrap" hidden>
+            <div class="bar"><div id="progress-bar" class="bar-fill"></div></div>
+            <p id="progress-text" class="progress-text"></p>
+          </div>
+        </div>
+
+        <div id="system-verdict" class="notice" hidden></div>
+
+        <dl id="system-plain" class="report" hidden></dl>
+
+        <details class="drawer">
+          <summary>Technical details</summary>
+          <div class="drawer-body">
+            <h3 class="sub">Platform</h3>
+            <dl id="platform-report" class="report"></dl>
+            <h3 class="sub">Pipeline</h3>
+            <dl id="adapter-report" class="report"></dl>
+
+            <h3 class="sub">What it reads from the current page</h3>
+            <div class="row">
+              <button id="observe" type="button" class="btn">Read page</button>
+              <button id="toggle-overlay" type="button" class="btn">Show boxes</button>
+            </div>
+            <dl id="observe-metrics" class="report"></dl>
+            <div class="legend" id="legend" hidden>
+              <span><i class="sw sw-pw"></i>password</span>
+              <span><i class="sw sw-edit"></i>text entry</span>
+              <span><i class="sw sw-int"></i>clickable</span>
+            </div>
+            <input id="element-filter" class="text-input" type="search" placeholder="Filter by name, role, or id">
+            <div id="element-list" class="element-list"></div>
+          </div>
+        </details>
+      </div>
+    </dialog>
+
+    <!--
+      Confirmations and the vault passphrase.
+
+      Asking the agent's questions no longer happens here — those appear inline in
+      the chat, where the rest of the conversation is. What is left is the two
+      cases that genuinely interrupt: confirming a deletion, and proving it is you
+      before a protected value is read.
+
+      A native <dialog> rather than a custom overlay: focus trapping, Escape
+      handling, and correct stacking come from the browser, which a hand-rolled
+      modal reliably gets wrong.
+    -->
+    <dialog id="prompt-dialog" class="prompt">
+      <form id="prompt-form" method="dialog">
+        <h2 id="prompt-title">Confirm</h2>
+        <p id="prompt-message" class="prompt-message"></p>
+        <input id="prompt-input" class="text-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <p class="hint" id="prompt-hint"></p>
+        <div class="row row-end">
+          <button id="prompt-cancel" type="button" class="btn">Cancel</button>
+          <button id="prompt-ok" type="submit" class="btn btn-primary">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+  </body>
+</html>
